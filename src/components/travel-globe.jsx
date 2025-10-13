@@ -5,7 +5,6 @@ import { MapPin, CalendarDays } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 const MotionButton = motion.button;
 
@@ -44,8 +43,7 @@ const TRIPS = [
   }
 ];
 
-// const DEFAULT_TEXTURE = "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
-const DEFAULT_TEXTURE = "/textures/political_map.png";
+const DEFAULT_TEXTURE = `${import.meta.env.BASE_URL}textures/political_map.png`;
 
 const parseISO = (s) => new Date(s);
 const toYear = (s) => String(parseISO(s).getFullYear());
@@ -75,10 +73,7 @@ export function TravelGlobe() {
   const [selected, setSelected] = useState(null);
   const [query, setQuery] = useState("");
 
-  const [textureUrl, setTextureUrl] = useState(DEFAULT_TEXTURE);
-  const [customUrl, setCustomUrl] = useState("");
-  const [isLoadingTexture, setIsLoadingTexture] = useState(false);
-  const [textureError, setTextureError] = useState("");
+  const textureUrl = DEFAULT_TEXTURE;
 
   const tripsSorted = useMemo(() => {
     return [...TRIPS]
@@ -114,6 +109,9 @@ export function TravelGlobe() {
     }));
   }, [tripsSorted]);
 
+  const latestTrip = tripsSorted[0];
+  const earliestTrip = tripsSorted[tripsSorted.length - 1];
+
   useEffect(() => {
     runSanityTests();
 
@@ -137,24 +135,6 @@ export function TravelGlobe() {
     g.autoRotateSpeed = 0.36;
   }, [tripsSorted]);
 
-  function applyTexture(url) {
-    setIsLoadingTexture(true);
-    setTextureError("");
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      setTextureUrl(url);
-      setIsLoadingTexture(false);
-    };
-    img.onerror = () => {
-      setIsLoadingTexture(false);
-      setTextureError(
-        "Failed to load texture (CORS/URL/format). Use a 2:1 equirectangular image."
-      );
-    };
-    img.src = url;
-  }
-
   function flyTo(trip, altitude = 1.4) {
     const g = globeRef.current;
     if (!g) return;
@@ -171,47 +151,79 @@ export function TravelGlobe() {
   }, [selected]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
+    <div className="flex min-h-screen flex-col text-slate-900">
+      <header className="travel-header relative overflow-hidden text-white shadow-lg">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-sky-500/35 blur-3xl" />
+          <div className="absolute bottom-[-30%] right-[-10%] h-96 w-96 rounded-full bg-indigo-500/30 blur-[200px]" />
+        </div>
+        <div className="relative mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Travel log</p>
-            <h1 className="text-2xl font-semibold text-slate-900">Places I've been</h1>
+            <p className="text-xs uppercase tracking-[0.4em] text-sky-200/80">Travel log</p>
+            <h1 className="text-3xl font-semibold tracking-tight">Places I've been</h1>
+            <p className="mt-2 max-w-xl text-sm">
+              Trace each journey on an interactive globe and keep your favourite memories within reach
+              {earliestTrip ? ` — adventures since ${toYear(earliestTrip.date)}.` : "."}
+            </p>
           </div>
-          <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 shadow-sm">
-            {TRIPS.length} destinations
+          <div className="flex flex-col gap-4 rounded-3xl bg-white/10 px-6 py-5 text-sm text-white shadow-2xl backdrop-blur md:flex-row md:items-center md:gap-12">
+            <div className="stat-card rounded-2xl bg-white/10 px-4 py-3">
+              <p className="stat-label text-xs uppercase tracking-wide">Destinations</p>
+              <p className="stat-value text-2xl font-semibold">{TRIPS.length}</p>
+            </div>
+            {latestTrip && (
+              <>
+                <div className="hidden h-12 w-px bg-white/20 md:block" />
+                <div className="stat-card max-w-[18rem] rounded-2xl bg-white/10 px-4 py-3">
+                  <p className="stat-label text-xs uppercase tracking-wide">Latest stop</p>
+                  <p className="stat-value text-sm font-semibold">{latestTrip.label}</p>
+                  <p className="stat-label text-xs">
+                    {new Date(latestTrip.date).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric"
+                    })}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="travel-layout mx-auto w-full max-w-6xl flex-1 px-4 pb-6 pt-4">
+      <main className="travel-main travel-layout mx-auto w-full max-w-6xl">
         <section className="travel-sidebar h-full w-full">
-          <Card className="flex h-full flex-col overflow-hidden shadow-lg">
-            <div className="flex items-center gap-2 border-b border-slate-200/70 px-4 py-3">
-              <MapPin className="h-5 w-5 text-sky-600" />
-              <span className="text-lg font-semibold">Your Travel Timeline</span>
+          <Card className="travel-sidebar-card flex h-full flex-col overflow-hidden">
+            <div className="flex items-center gap-3 bg-gradient-to-r from-sky-50 to-white px-5 py-4">
+              <span className="grid h-10 w-10 place-items-center rounded-2xl bg-sky-500/15 text-sky-600">
+                <MapPin className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Journey timeline</p>
+                <p className="text-lg font-semibold text-slate-900">Browse every stop</p>
+              </div>
             </div>
-            <div className="border-b border-slate-200/70 px-4 py-3">
+            <div className="px-5 pb-4 pt-3">
               <Input
                 placeholder="Filter places or notes…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <div ref={containerRef} className="flex-1 space-y-2 overflow-auto px-3 py-4">
+            <div ref={containerRef} className="flex-1 space-y-3 overflow-auto px-5 pb-5">
               {filteredTrips.map((t) => (
                 <MotionButton
                   key={t.id}
                   id={`trip-${t.id}`}
                   onClick={() => flyTo(t)}
-                  className={`w-full rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:shadow-md ${
-                    selected?.id === t.id ? "ring-2 ring-sky-500" : ""
+                  className={`travel-trip group w-full rounded-2xl p-4 text-left transition-all ${
+                    selected?.id === t.id ? "is-active" : ""
                   }`}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-900">{t.label}</span>
+                    <span className="font-medium text-slate-900 group-hover:text-slate-900">{t.label}</span>
                     <span className="text-sm text-slate-500">{toYear(t.date)}</span>
                   </div>
                   <div className="mt-1 flex items-center gap-2 text-sm text-slate-600">
@@ -225,32 +237,25 @@ export function TravelGlobe() {
                     </span>
                   </div>
                   {selected?.id === t.id && (
-                    <div className="mt-2 text-sm text-slate-700">{t.comments}</div>
+                    <div className="mt-2 rounded-xl bg-sky-50/80 p-3 text-sm text-slate-700 shadow-inner">
+                      {t.comments}
+                    </div>
                   )}
                 </MotionButton>
               ))}
               {filteredTrips.length === 0 && (
-                <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-                  No matches.
+                <div className="travel-empty rounded-2xl border border-dashed border-slate-300/60 bg-white/70 px-4 py-6 text-center text-sm text-slate-500">
+                  No matches found.
                 </div>
               )}
             </div>
           </Card>
         </section>
 
-        <section className="travel-globe relative min-h-[420px] overflow-hidden rounded-3xl bg-white shadow-xl">
-          <div className="absolute left-4 top-4 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm shadow">
-            <input
-              className="h-9 w-56 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              placeholder="Custom 2:1 texture URL (JPG/PNG, CORS)"
-              value={customUrl}
-              onChange={(e) => setCustomUrl(e.target.value)}
-            />
-            <Button size="sm" onClick={() => customUrl && applyTexture(customUrl)}>
-              Apply
-            </Button>
-            {isLoadingTexture && <span className="text-xs text-slate-500">Loading…</span>}
-            {textureError && <span className="text-xs text-red-600">{textureError}</span>}
+        <section className="travel-globe relative rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-2xl ring-1 ring-slate-900/60">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute left-10 top-10 h-52 w-52 rounded-full bg-sky-500/20 blur-3xl" />
+            <div className="absolute bottom-[-25%] right-6 h-72 w-72 rounded-full bg-indigo-500/25 blur-[140px]" />
           </div>
 
           <div className="absolute inset-0">
@@ -258,7 +263,7 @@ export function TravelGlobe() {
               ref={globeRef}
               width={undefined}
               height={undefined}
-              backgroundColor="#ffffff"
+              backgroundColor="rgba(2,6,23,1)"
               globeImageUrl={textureUrl}
               bumpImageUrl="https://unpkg.com/three-globe/example/img/earth-topology.png"
               backgroundImageUrl={null}
@@ -266,7 +271,7 @@ export function TravelGlobe() {
               pointsData={pointsData}
               pointAltitude={(d) => d.altitude}
               pointRadius={(d) => d.size}
-              pointColor={(d) => d.color || "#2563EB"}
+              pointColor={(d) => d.color || "#38bdf8"}
               pointLabel={(d) => d.pointLabel}
               onPointClick={onPointClick}
               labelsData={labelsData}
@@ -277,10 +282,25 @@ export function TravelGlobe() {
               labelSize={(d) => d.size}
               labelColor={(d) => d.color}
               labelDotRadius={0}
-              atmosphereColor="#a5c8ff"
+              atmosphereColor="#38bdf8"
               atmosphereAltitude={0.23}
             />
           </div>
+
+          {selected && (
+            <div className="pointer-events-none absolute bottom-6 left-6 z-10 max-w-xs rounded-2xl bg-slate-900/55 px-4 py-4 text-white shadow-2xl backdrop-blur">
+              <p className="text-xs uppercase tracking-wide text-sky-200/90">Currently viewing</p>
+              <p className="mt-1 text-lg font-semibold">{selected.label}</p>
+              <p className="text-xs text-slate-100/90">
+                {new Date(selected.date).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric"
+                })}
+              </p>
+              <p className="mt-2 text-sm text-slate-100/90">{selected.comments}</p>
+            </div>
+          )}
         </section>
       </main>
     </div>
