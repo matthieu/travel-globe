@@ -44,7 +44,8 @@ const TRIPS = [
   }
 ];
 
-const DEFAULT_TEXTURE = "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
+// const DEFAULT_TEXTURE = "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
+const DEFAULT_TEXTURE = "/textures/political_map.png";
 
 const parseISO = (s) => new Date(s);
 const toYear = (s) => String(parseISO(s).getFullYear());
