@@ -157,7 +157,7 @@ export function TravelGlobe() {
     return tripsSorted.map((trip) => ({
       ...trip,
       altitude: 0.02,
-      size: 0.7,
+      size: 0.3,
       pointLabel: `${trip.label} — ${toYear(trip.date)}`
     }));
   }, [tripsSorted]);
@@ -169,7 +169,7 @@ export function TravelGlobe() {
       altitude: 0.03,
       text: `${toYear(trip.date)} - ${trip.label}`,
       color: trip.color || "#111827",
-      size: 1.1
+      size: 0.8
     }));
   }, [tripsSorted]);
 
@@ -211,18 +211,6 @@ export function TravelGlobe() {
 
   return (
     <div className="flex min-h-screen flex-col text-slate-900">
-      <header className="travel-header relative overflow-hidden text-white shadow-lg">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-sky-500/35 blur-3xl" />
-          <div className="absolute bottom-[-30%] right-[-10%] h-96 w-96 rounded-full bg-indigo-500/30 blur-[200px]" />
-        </div>
-        <div className="relative mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-sky-200/80">Travel log</p>
-          </div>
-        </div>
-      </header>
-
       <main className="travel-main travel-layout mx-auto w-full max-w-6xl">
         <section className="travel-sidebar h-full w-full">
           <Card className="travel-sidebar-card flex h-full flex-col overflow-hidden">
@@ -242,7 +230,7 @@ export function TravelGlobe() {
                 onChange={(event) => setQuery(event.target.value)}
               />
             </div>
-            <div ref={containerRef} className="flex-1 space-y-3 overflow-auto px-5 pb-5">
+            <div ref={containerRef} className="travel-sidebar-list flex-1 space-y-3 overflow-auto px-5 pb-5">
               {filteredTrips.map((trip) => (
                 <MotionButton
                   key={trip.id}
