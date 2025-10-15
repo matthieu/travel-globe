@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Globe from "react-globe.gl";
 import { motion } from "framer-motion";
 import { MapPin, CalendarDays } from "lucide-react";
+import { decompressFromEncodedURIComponent } from "lz-string";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 const MotionButton = motion.button;
 
-const TRIPS = [
+const DEFAULT_TRIPS = [
   {
     label: "Kyoto, Japan",
     lat: 35.0116,
@@ -45,24 +46,42 @@ const TRIPS = [
 
 const DEFAULT_TEXTURE = `${import.meta.env.BASE_URL}textures/political_map.png`;
 
-const parseISO = (s) => new Date(s);
-const toYear = (s) => String(parseISO(s).getFullYear());
+const parseISO = (value) => new Date(value);
+const toYear = (value) => String(parseISO(value).getFullYear());
 
-function runSanityTests() {
+function runSanityTests(trips) {
   const failures = [];
-  if (!Array.isArray(TRIPS)) failures.push("TRIPS is not an array");
-  TRIPS.forEach((t, i) => {
-    if (typeof t.label !== "string" || !t.label) failures.push(`Trip #${i} invalid label`);
-    if (typeof t.lat !== "number" || t.lat < -90 || t.lat > 90) failures.push(`Trip #${i} invalid lat`);
-    if (typeof t.lng !== "number" || t.lng < -180 || t.lng > 180) failures.push(`Trip #${i} invalid lng`);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.date)) failures.push(`Trip #${i} invalid date format (YYYY-MM-DD)`);
-    if (Number.isNaN(parseISO(t.date).getTime())) failures.push(`Trip #${i} invalid date value`);
-    if (typeof t.comments !== "string") failures.push(`Trip #${i} invalid comments`);
+  if (!Array.isArray(trips)) failures.push("Trips payload is not an array");
+  trips?.forEach((trip, index) => {
+    if (typeof trip.label !== "string" || !trip.label) failures.push(`Trip #${index} invalid label`);
+    if (typeof trip.lat !== "number" || trip.lat < -90 || trip.lat > 90) failures.push(`Trip #${index} invalid lat`);
+    if (typeof trip.lng !== "number" || trip.lng < -180 || trip.lng > 180) failures.push(`Trip #${index} invalid lng`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trip.date)) failures.push(`Trip #${index} invalid date format (YYYY-MM-DD)`);
+    if (Number.isNaN(parseISO(trip.date).getTime())) failures.push(`Trip #${index} invalid date value`);
+    if (typeof trip.comments !== "string") failures.push(`Trip #${index} invalid comments`);
   });
   if (failures.length) {
-    console.warn("[TravelGlobe] Sanity test failures:\n" + failures.map((f) => " - " + f).join("\n"));
+    console.warn("[TravelGlobe] Sanity test failures:\n" + failures.map((failure) => " - " + failure).join("\n"));
   } else {
-    console.log("[TravelGlobe] Sanity tests passed (", TRIPS.length, "trips )");
+    console.log(`[TravelGlobe] Sanity tests passed ( ${trips?.length ?? 0} trips )`);
+  }
+}
+
+function parseTripsFromUrl() {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get("trips");
+  if (!encoded) return null;
+
+  try {
+    const json = decompressFromEncodedURIComponent(encoded);
+    if (!json) throw new Error("Could not decompress payload");
+    const parsed = JSON.parse(json);
+    if (!Array.isArray(parsed)) throw new Error("Decompressed payload is not an array");
+    return parsed;
+  } catch (error) {
+    console.warn("[TravelGlobe] Failed to import trips from URL:", error.message);
+    return null;
   }
 }
 
@@ -72,56 +91,67 @@ export function TravelGlobe() {
 
   const [selected, setSelected] = useState(null);
   const [query, setQuery] = useState("");
+  const [tripsData, setTripsData] = useState(DEFAULT_TRIPS);
 
   const textureUrl = DEFAULT_TEXTURE;
 
-  const tripsSorted = useMemo(() => {
-    return [...TRIPS]
-      .sort((a, b) => parseISO(b.date) - parseISO(a.date))
-      .map((t, i) => ({ id: i + 1, ...t }));
+  useEffect(() => {
+    const override = parseTripsFromUrl();
+    if (override) {
+      setTripsData(override);
+    }
   }, []);
+
+  useEffect(() => {
+    runSanityTests(tripsData);
+  }, [tripsData]);
+
+  const tripsSorted = useMemo(() => {
+    return [...tripsData]
+      .sort((a, b) => parseISO(b.date) - parseISO(a.date))
+      .map((trip, index) => ({ id: index + 1, ...trip }));
+  }, [tripsData]);
+
+  useEffect(() => {
+    setSelected(tripsSorted[0] ?? null);
+  }, [tripsSorted]);
 
   const filteredTrips = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return tripsSorted;
-    return tripsSorted.filter((t) =>
-      t.label.toLowerCase().includes(q) || t.comments.toLowerCase().includes(q)
+    return tripsSorted.filter((trip) =>
+      trip.label.toLowerCase().includes(q) || trip.comments.toLowerCase().includes(q)
     );
   }, [query, tripsSorted]);
 
   const pointsData = useMemo(() => {
-    return tripsSorted.map((t) => ({
-      ...t,
+    return tripsSorted.map((trip) => ({
+      ...trip,
       altitude: 0.02,
       size: 0.7,
-      pointLabel: `${t.label} — ${toYear(t.date)}`
+      pointLabel: `${trip.label} — ${toYear(trip.date)}`
     }));
   }, [tripsSorted]);
 
   const labelsData = useMemo(() => {
-    return tripsSorted.map((t) => ({
-      lat: t.lat,
-      lng: t.lng,
+    return tripsSorted.map((trip) => ({
+      lat: trip.lat,
+      lng: trip.lng,
       altitude: 0.03,
-      text: `${toYear(t.date)} • ${t.label}`,
-      color: t.color || "#111827",
+      text: `${toYear(trip.date)} • ${trip.label}`,
+      color: trip.color || "#111827",
       size: 1.1
     }));
   }, [tripsSorted]);
 
-  const latestTrip = tripsSorted[0];
-  const earliestTrip = tripsSorted[tripsSorted.length - 1];
-
   useEffect(() => {
-    runSanityTests();
-
-    const g = globeRef.current;
-    if (!g) return;
+    const globe = globeRef.current;
+    if (!globe) return;
 
     const focus = tripsSorted[0] || { lat: 0, lng: 0 };
-    g.pointOfView({ lat: focus.lat, lng: focus.lng, altitude: 1.8 }, 0);
+    globe.pointOfView({ lat: focus.lat, lng: focus.lng, altitude: 1.8 }, 0);
 
-    const controls = g.controls();
+    const controls = globe.controls();
     if (controls) {
       controls.enableDamping = true;
       controls.dampingFactor = 0.08;
@@ -131,23 +161,23 @@ export function TravelGlobe() {
       controls.maxDistance = 600;
     }
 
-    g.autoRotate = true;
-    g.autoRotateSpeed = 0.36;
+    globe.autoRotate = true;
+    globe.autoRotateSpeed = 0.36;
   }, [tripsSorted]);
 
   function flyTo(trip, altitude = 1.4) {
-    const g = globeRef.current;
-    if (!g) return;
-    g.pointOfView({ lat: trip.lat, lng: trip.lng, altitude }, 1500);
+    const globe = globeRef.current;
+    if (!globe) return;
+    globe.pointOfView({ lat: trip.lat, lng: trip.lng, altitude }, 1500);
     setSelected(trip);
   }
 
-  const onPointClick = (p) => flyTo(p);
+  const onPointClick = (point) => flyTo(point);
 
   useEffect(() => {
     if (!selected || !containerRef.current) return;
-    const el = document.getElementById(`trip-${selected.id}`);
-    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const element = document.getElementById(`trip-${selected.id}`);
+    if (element) element.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selected]);
 
   return (
@@ -160,33 +190,6 @@ export function TravelGlobe() {
         <div className="relative mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-sky-200/80">Travel log</p>
-            <h1 className="text-3xl font-semibold tracking-tight">Places I've been</h1>
-            <p className="mt-2 max-w-xl text-sm">
-              Trace each journey on an interactive globe and keep your favourite memories within reach
-              {earliestTrip ? ` — adventures since ${toYear(earliestTrip.date)}.` : "."}
-            </p>
-          </div>
-          <div className="flex flex-col gap-4 rounded-3xl bg-white/10 px-6 py-5 text-sm text-white shadow-2xl backdrop-blur md:flex-row md:items-center md:gap-12">
-            <div className="stat-card rounded-2xl bg-white/10 px-4 py-3">
-              <p className="stat-label text-xs uppercase tracking-wide">Destinations</p>
-              <p className="stat-value text-2xl font-semibold">{TRIPS.length}</p>
-            </div>
-            {latestTrip && (
-              <>
-                <div className="hidden h-12 w-px bg-white/20 md:block" />
-                <div className="stat-card max-w-[18rem] rounded-2xl bg-white/10 px-4 py-3">
-                  <p className="stat-label text-xs uppercase tracking-wide">Latest stop</p>
-                  <p className="stat-value text-sm font-semibold">{latestTrip.label}</p>
-                  <p className="stat-label text-xs">
-                    {new Date(latestTrip.date).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric"
-                    })}
-                  </p>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </header>
@@ -207,38 +210,38 @@ export function TravelGlobe() {
               <Input
                 placeholder="Filter places or notes…"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(event) => setQuery(event.target.value)}
               />
             </div>
             <div ref={containerRef} className="flex-1 space-y-3 overflow-auto px-5 pb-5">
-              {filteredTrips.map((t) => (
+              {filteredTrips.map((trip) => (
                 <MotionButton
-                  key={t.id}
-                  id={`trip-${t.id}`}
-                  onClick={() => flyTo(t)}
+                  key={trip.id}
+                  id={`trip-${trip.id}`}
+                  onClick={() => flyTo(trip)}
                   className={`travel-trip group w-full rounded-2xl p-4 text-left transition-all ${
-                    selected?.id === t.id ? "is-active" : ""
+                    selected?.id === trip.id ? "is-active" : ""
                   }`}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-900 group-hover:text-slate-900">{t.label}</span>
-                    <span className="text-sm text-slate-500">{toYear(t.date)}</span>
+                    <span className="font-medium text-slate-900 group-hover:text-slate-900">{trip.label}</span>
+                    <span className="text-sm text-slate-500">{toYear(trip.date)}</span>
                   </div>
                   <div className="mt-1 flex items-center gap-2 text-sm text-slate-600">
                     <CalendarDays className="h-4 w-4 text-sky-500" />
                     <span>
-                      {new Date(t.date).toLocaleDateString(undefined, {
+                      {new Date(trip.date).toLocaleDateString(undefined, {
                         year: "numeric",
                         month: "short",
                         day: "numeric"
                       })}
                     </span>
                   </div>
-                  {selected?.id === t.id && (
+                  {selected?.id === trip.id && (
                     <div className="mt-2 rounded-xl bg-sky-50/80 p-3 text-sm text-slate-700 shadow-inner">
-                      {t.comments}
+                      {trip.comments}
                     </div>
                   )}
                 </MotionButton>
@@ -269,38 +272,23 @@ export function TravelGlobe() {
               backgroundImageUrl={null}
               rendererConfig={{ antialias: true, powerPreference: "high-performance" }}
               pointsData={pointsData}
-              pointAltitude={(d) => d.altitude}
-              pointRadius={(d) => d.size}
-              pointColor={(d) => d.color || "#38bdf8"}
-              pointLabel={(d) => d.pointLabel}
+              pointAltitude={(data) => data.altitude}
+              pointRadius={(data) => data.size}
+              pointColor={(data) => data.color || "#38bdf8"}
+              pointLabel={(data) => data.pointLabel}
               onPointClick={onPointClick}
               labelsData={labelsData}
-              labelLat={(d) => d.lat}
-              labelLng={(d) => d.lng}
-              labelAltitude={(d) => d.altitude}
-              labelText={(d) => d.text}
-              labelSize={(d) => d.size}
-              labelColor={(d) => d.color}
+              labelLat={(data) => data.lat}
+              labelLng={(data) => data.lng}
+              labelAltitude={(data) => data.altitude}
+              labelText={(data) => data.text}
+              labelSize={(data) => data.size}
+              labelColor={(data) => data.color}
               labelDotRadius={0}
               atmosphereColor="#38bdf8"
               atmosphereAltitude={0.23}
             />
           </div>
-
-          {selected && (
-            <div className="pointer-events-none absolute bottom-6 left-6 z-10 max-w-xs rounded-2xl bg-slate-900/55 px-4 py-4 text-white shadow-2xl backdrop-blur">
-              <p className="text-xs uppercase tracking-wide text-sky-200/90">Currently viewing</p>
-              <p className="mt-1 text-lg font-semibold">{selected.label}</p>
-              <p className="text-xs text-slate-100/90">
-                {new Date(selected.date).toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric"
-                })}
-              </p>
-              <p className="mt-2 text-sm text-slate-100/90">{selected.comments}</p>
-            </div>
-          )}
         </section>
       </main>
     </div>

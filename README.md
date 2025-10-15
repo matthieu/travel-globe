@@ -42,6 +42,41 @@ The sample trip data lives in `src/components/travel-globe.jsx`. Update the `TRI
 
 If you publish from a branch other than `main`, update the workflow trigger accordingly.
 
+## Share private trip data
+
+Keep the default sample trips in the repo and share your real itinerary through the URL when you want friends to see it:
+
+1. Create a JSON file locally (for example `my-trips.json`) that contains the array described above.
+2. Compress it with the helper script:
+
+   ```bash
+   node scripts/compress-trips.mjs my-trips.json
+   ```
+
+   Copy the output string (or the full `trips=<value>` line).
+3. Append the value as a query parameter when you visit the site:
+
+   ```text
+   https://<your-pages-url>/?trips=<compressed-string>
+   ```
+
+   The app will decompress the payload on load and render those trips instead of the defaults. Nothing is stored or committed—share the link only with people you trust.
+
+### Generate trips from a CSV
+
+If you keep your itinerary in a spreadsheet, you can turn it into the expected JSON (and then compress it) directly from the repo:
+
+```bash
+# Date,Location,Color,Comments ... → JSON
+GEOCODER_USER_AGENT="travel-globe/1.0 (your-email@example.com)" \
+  node scripts/csv-to-trips.mjs traveled.csv my-trips.json
+
+# Optional: compress the result into a sharable link
+node scripts/compress-trips.mjs my-trips.json
+```
+
+The CSV converter looks up latitude/longitude via the public Nominatim API by default. Be kind to the service: provide a descriptive `GEOCODER_USER_AGENT`, and adjust `GEOCODER_DELAY_MS` (default 1200 ms between requests) if needed. You can also point `GEOCODER_ENDPOINT` at your own geocoder or a local cache.
+
 ## Stack
 
 - React 19 + Vite 7
