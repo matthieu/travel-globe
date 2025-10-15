@@ -44,10 +44,34 @@ const DEFAULT_TRIPS = [
   }
 ];
 
-const DEFAULT_TEXTURE = `${import.meta.env.BASE_URL}textures/political_map.png`;
+const DEFAULT_TEXTURE = `${import.meta.env.BASE_URL}textures/eo_base_2020_clean_3600x1800.png`;
+
+const DEFAULT_COLOR = "#38bdf8";
 
 const parseISO = (value) => new Date(value);
 const toYear = (value) => String(parseISO(value).getFullYear());
+
+const HEX_COLOR_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+function sanitizeTrip(trip, index) {
+  const lat = Number(trip.lat);
+  const lng = Number(trip.lng);
+  const color = typeof trip.color === "string" && HEX_COLOR_REGEX.test(trip.color)
+    ? trip.color
+    : DEFAULT_COLOR;
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    console.warn(`[TravelGlobe] Trip #${index} has invalid coordinates`, trip);
+    return null;
+  }
+
+  return {
+    ...trip,
+    lat,
+    lng,
+    color
+  };
+}
 
 function runSanityTests(trips) {
   const failures = [];
@@ -59,6 +83,7 @@ function runSanityTests(trips) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(trip.date)) failures.push(`Trip #${index} invalid date format (YYYY-MM-DD)`);
     if (Number.isNaN(parseISO(trip.date).getTime())) failures.push(`Trip #${index} invalid date value`);
     if (typeof trip.comments !== "string") failures.push(`Trip #${index} invalid comments`);
+    if (trip.color && !HEX_COLOR_REGEX.test(trip.color)) failures.push(`Trip #${index} invalid color`);
   });
   if (failures.length) {
     console.warn("[TravelGlobe] Sanity test failures:\n" + failures.map((failure) => " - " + failure).join("\n"));
@@ -93,7 +118,15 @@ export function TravelGlobe() {
   const [query, setQuery] = useState("");
   const [tripsData, setTripsData] = useState(DEFAULT_TRIPS);
 
-  const textureUrl = DEFAULT_TEXTURE;
+ const textureUrl = DEFAULT_TEXTURE;
+
+  const normalizedTrips = useMemo(() => {
+    return [...tripsData]
+      .sort((a, b) => parseISO(b.date) - parseISO(a.date))
+      .map((trip, index) => sanitizeTrip(trip, index))
+      .filter(Boolean)
+      .map((trip, index) => ({ id: index + 1, ...trip }));
+  }, [tripsData]);
 
   useEffect(() => {
     const override = parseTripsFromUrl();
@@ -103,14 +136,10 @@ export function TravelGlobe() {
   }, []);
 
   useEffect(() => {
-    runSanityTests(tripsData);
-  }, [tripsData]);
+    runSanityTests(normalizedTrips);
+  }, [normalizedTrips]);
 
-  const tripsSorted = useMemo(() => {
-    return [...tripsData]
-      .sort((a, b) => parseISO(b.date) - parseISO(a.date))
-      .map((trip, index) => ({ id: index + 1, ...trip }));
-  }, [tripsData]);
+  const tripsSorted = normalizedTrips;
 
   useEffect(() => {
     setSelected(tripsSorted[0] ?? null);
@@ -138,7 +167,7 @@ export function TravelGlobe() {
       lat: trip.lat,
       lng: trip.lng,
       altitude: 0.03,
-      text: `${toYear(trip.date)} • ${trip.label}`,
+      text: `${toYear(trip.date)} - ${trip.label}`,
       color: trip.color || "#111827",
       size: 1.1
     }));
