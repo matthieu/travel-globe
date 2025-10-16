@@ -156,20 +156,9 @@ export function TravelGlobe() {
   const pointsData = useMemo(() => {
     return tripsSorted.map((trip) => ({
       ...trip,
-      altitude: 0.02,
+      altitude: 0.005,
       size: 0.3,
       pointLabel: `${trip.label} — ${toYear(trip.date)}`
-    }));
-  }, [tripsSorted]);
-
-  const labelsData = useMemo(() => {
-    return tripsSorted.map((trip) => ({
-      lat: trip.lat,
-      lng: trip.lng,
-      altitude: 0.03,
-      text: `${toYear(trip.date)} - ${trip.label}`,
-      color: trip.color || "#111827",
-      size: 0.8
     }));
   }, [tripsSorted]);
 
@@ -213,24 +202,25 @@ export function TravelGlobe() {
     <div className="flex min-h-screen flex-col text-slate-900">
       <main className="travel-main travel-layout mx-auto w-full max-w-6xl">
         <section className="travel-sidebar h-full w-full">
-          <Card className="travel-sidebar-card flex h-full flex-col overflow-hidden">
-            <div className="flex items-center gap-3 bg-gradient-to-r from-sky-50 to-white px-5 py-4">
-              <span className="grid h-10 w-10 place-items-center rounded-2xl bg-sky-500/15 text-sky-600">
-                <MapPin className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">Journey timeline</p>
-                <p className="text-lg font-semibold text-slate-900">Browse every stop</p>
+          <div className="travel-sidebar-shell">
+            <Card className="travel-sidebar-card flex h-full flex-col overflow-hidden">
+              <div className="travel-sidebar-header flex items-center gap-3 px-5 py-4">
+                <span className="travel-sidebar-badge grid h-10 w-10 place-items-center">
+                  <MapPin className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="travel-sidebar-label text-xs uppercase tracking-[0.35em]">Journey timeline</p>
+                  <p className="travel-sidebar-title text-lg font-semibold">Browse every stop</p>
+                </div>
               </div>
-            </div>
-            <div className="px-5 pb-4 pt-3">
-              <Input
-                placeholder="Filter places or notes…"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </div>
-            <div ref={containerRef} className="travel-sidebar-list flex-1 space-y-3 overflow-auto px-5 pb-5">
+              <div className="travel-sidebar-search px-5 pb-4 pt-3">
+                <Input
+                  placeholder="Filter places or notes…"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </div>
+              <div ref={containerRef} className="travel-sidebar-list flex-1 space-y-3 overflow-auto px-5 pb-5">
               {filteredTrips.map((trip) => (
                 <MotionButton
                   key={trip.id}
@@ -268,11 +258,12 @@ export function TravelGlobe() {
                   No matches found.
                 </div>
               )}
-            </div>
-          </Card>
+              </div>
+            </Card>
+          </div>
         </section>
 
-        <section className="travel-globe relative rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-2xl ring-1 ring-slate-900/60">
+        <section className="travel-globe relative rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-2xl ring-slate-900/60">
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute left-10 top-10 h-52 w-52 rounded-full bg-sky-500/20 blur-3xl" />
             <div className="absolute bottom-[-25%] right-6 h-72 w-72 rounded-full bg-indigo-500/25 blur-[140px]" />
@@ -294,7 +285,6 @@ export function TravelGlobe() {
               pointColor={(data) => data.color || "#38bdf8"}
               pointLabel={(data) => data.pointLabel}
               onPointClick={onPointClick}
-              labelsData={labelsData}
               labelLat={(data) => data.lat}
               labelLng={(data) => data.lng}
               labelAltitude={(data) => data.altitude}

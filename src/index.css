@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 * {
@@ -17,18 +17,12 @@ body {
   min-height: 100vh;
   background: linear-gradient(180deg, #010712 0%, #020c1c 35%, #041a31 100%);
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: #0f172a;
+  color: #e2e8f0;
   overflow-y: auto;
 }
 
 .travel-main {
-  background: linear-gradient(160deg, rgba(15, 23, 42, 0.92) 0%, rgba(8, 145, 178, 0.08) 45%, rgba(2, 6, 23, 0.94) 100%);
-  border-radius: 36px;
-  box-shadow: 0 50px 120px -80px rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  padding: 2.75rem 2.25rem;
-  backdrop-filter: blur(12px);
-  margin: -2.5rem auto 4rem;
+  padding: 3rem 2.5rem;
 }
 
 .travel-header {
@@ -64,22 +58,82 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
+.travel-sidebar {
+  position: relative;
+}
+
+.travel-sidebar-shell {
+  position: relative;
+  border-radius: 30px;
+  padding: 1.1rem;
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(8, 47, 73, 0.82) 55%, rgba(12, 74, 110, 0.78));
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 35px 90px -70px rgba(8, 47, 73, 0.9);
+  overflow: hidden;
+}
+
+.travel-sidebar-shell::before {
+  content: "";
+  position: absolute;
+  inset: -30% 40% 65% -30%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.2), transparent 70%);
+  filter: blur(35px);
+  pointer-events: none;
+}
+
 .travel-sidebar-card {
-  background: rgba(255, 255, 255, 0.92);
+  background:
+    linear-gradient(160deg, rgba(241, 245, 249, 0.98) 0%, rgba(248, 250, 252, 0.95) 60%, rgba(248, 250, 252, 0.9) 100%);
   border: none;
-  box-shadow: 0 30px 60px -40px rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(16px);
-  border-radius: 28px;
+  border-radius: 24px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 28px 70px -55px rgba(15, 23, 42, 0.65);
+}
+
+.travel-sidebar-header {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), transparent 60%);
+}
+
+.travel-sidebar-badge {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.15));
+  border-radius: 16px;
+  color: #0f172a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.travel-sidebar-label {
+  color: rgba(15, 23, 42, 0.55);
+  letter-spacing: 0.45em;
+}
+
+.travel-sidebar-title {
+  color: #0f172a;
+}
+
+.travel-sidebar-search {
+  background: linear-gradient(180deg, rgba(241, 245, 249, 0.9), rgba(248, 250, 252, 0.85));
 }
 
 .travel-sidebar-list {
-  max-height: calc(100vh - 20rem);
+  max-height: clamp(420px, 62vh, 720px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+
+.travel-sidebar-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.travel-sidebar-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.6), rgba(148, 163, 184, 0.25));
+  border-radius: 999px;
 }
 
 .travel-trip {
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 18px 35px -28px rgba(15, 23, 42, 0.45);
+  color: #0f172a;
 }
 
 .travel-trip:hover {
@@ -90,8 +144,10 @@ body {
 
 .travel-trip.is-active {
   border-color: rgba(56, 189, 248, 0.8);
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.95), rgba(248, 250, 252, 0.9));
+  background:
+    linear-gradient(135deg, rgba(224, 242, 254, 0.96), rgba(248, 250, 252, 0.92));
   box-shadow: 0 30px 55px -30px rgba(14, 165, 233, 0.55);
+  color: #0f172a;
 }
 
 .travel-empty {
